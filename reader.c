@@ -21,11 +21,15 @@ compile with the command: gcc demo_rx.c rs232.c -Wall -Wextra -o2 -o test_rx
 
 #include "rs232.h"
 
+#include <stdbool.h>
+
 
 int connected;
 int main()
 {
     connected=0;
+    bool haveAlerted = false;
+
     if(1<3)
     {
         FILE *fpt;
@@ -44,7 +48,7 @@ int main()
     char mode[]={'8','N','1',0};
 
     int a=0;
-    while(2>1)
+    while(true)
     {
         //connected=0;
         if(RS232_OpenComport(cport_nr, bdrate, mode, 0))
@@ -58,15 +62,14 @@ int main()
         }
         else
         {
-            printf("serial port opening\n");
-
+            printf("serial port opening Success\n");
         }
         a=0;
         while(a<20)
         {
 
             n = RS232_PollComport(cport_nr, buf, 4095);
-            a++;
+
             if(n > 0)
             {
                 buf[n] = 0;   /* always put a "null" at the end of a string! */
@@ -83,15 +86,33 @@ int main()
                 fptr=fopen("data.pat","w");
                 fprintf(fptr,"%s",(char *)buf);
                 fclose(fptr);
-            }
+                if(a>0)
+                  a--;
 
-#ifdef _WIN32
-            Sleep(100);
-#else
-            usleep(100000);  /* sleep for 100 milliSeconds */
-#endif
+                if(!haveAlerted)
+                {
+                    printf("serial opened successfully");
+                    if(connected==0)
+                    {
+                        system("hstart -hide \"java open.java\"");
+                    }
+
+                    connected=1;
+                    haveAlerted = true;
+                }
+            } else
+              {
+               a++;
+              }
+
+
+                #ifdef _WIN32
+                            Sleep(100);
+                #else
+                            usleep(100000);  /* sleep for 100 milliSeconds */
+                #endif
         }
-        if(n<1)
+
         {
             printf("Can not open comport\n");
             if(connected==1)
@@ -104,24 +125,13 @@ int main()
             fptr=fopen("data.pat","w");
             fprintf(fptr,"ST,  0.0KG");
             fclose(fptr);
+            haveAlerted = false;
         }
-        else
-        {
-            printf("serial opened successfully");
-            if(connected==0)
-            {
-                system("hstart -hide \"java open.java\"");
-            }
 
-            connected=1;
-        }
+
         RS232_CloseComport(cport_nr);
         printf(" Closing Port");
     }
-
-
-
-
   return(0);
 }
 
